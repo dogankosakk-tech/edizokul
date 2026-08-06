@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b3d2e" />
+    <meta name="description" content="Ediz için okul parası takip — TL/USD, TCMB kuru, aile paylaşımı" />
+    <title>Ediz Okul Parası</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b3d2e'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='28' fill='%23e8f5ef'%3EE%3C/text%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div class="bg" aria-hidden="true"></div>
+
+    <header class="top">
+      <p class="eyebrow">Okul destek fonu</p>
+      <span id="cloudBadge" class="badge" data-on="0">Yerel mod</span>
+    </header>
+
+    <!-- Karşılama -->
+    <section id="welcomeScreen" class="screen">
+      <div class="hero welcome-hero">
+        <h1 class="brand">Ediz Okul</h1>
+        <p class="lede">
+          Ailece okul parasını takip et. USD ödemeler seçtiğin tarih/saatteki
+          <strong>TCMB döviz alış</strong> kuruyla TL’ye çevrilir.
+        </p>
+        <form class="welcome-form" onsubmit="return false;">
+          <label>
+            Fon adı
+            <input id="newTitle" type="text" value="Ediz Okul Parası" maxlength="60" />
+          </label>
+          <label>
+            Hedef tutar (₺)
+            <input id="newHedef" type="number" inputmode="decimal" min="1" step="0.01" placeholder="örn. 150000" required />
+          </label>
+          <button type="button" id="btnCreate" class="btn primary">Fon oluştur</button>
+        </form>
+        <button type="button" id="btnOpenSetup" class="linkish">
+          Aileyle aynı linkten görmek için paylaşım kurulumu →
+        </button>
+      </div>
+    </section>
+
+    <!-- Firebase kurulum -->
+    <section id="setupScreen" class="screen hidden">
+      <div class="panel">
+        <button type="button" id="btnSetupBack" class="linkish">← Geri</button>
+        <h2>Paylaşımı aç (tek sefer)</h2>
+        <p>
+          Sunucu çalıştırmana gerek yok. Ücretsiz Firebase ile aile aynı linkten
+          canlı görür. Bilgileri buraya yapıştırman yeterli — dosya düzenlemen gerekmez.
+        </p>
+        <ol class="steps">
+          <li>
+            <a href="https://console.firebase.google.com/" target="_blank" rel="noopener">Firebase Console</a>
+            → <em>Add project</em> → isim: <code>edizokul</code>
+          </li>
+          <li>
+            Build → <strong>Realtime Database</strong> → Create →
+            <strong>europe-west1</strong> → test mode ile başla
+          </li>
+          <li>
+            Project settings → Your apps → Web → <code>firebaseConfig</code> kopyala
+          </li>
+          <li>
+            Rules (aile içi link; yalnızca güvendiklerinle paylaş):
+            <pre class="code">{
+  "rules": {
+    "rooms": {
+      "$roomId": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}</pre>
+          </li>
+        </ol>
+        <form id="fbForm" class="welcome-form" onsubmit="return false;">
+          <label>
+            apiKey
+            <input id="fbApiKey" type="text" autocomplete="off" placeholder="AIza…" required />
+          </label>
+          <label>
+            authDomain
+            <input id="fbAuthDomain" type="text" placeholder="proje.firebaseapp.com" />
+          </label>
+          <label>
+            databaseURL
+            <input id="fbDatabaseURL" type="url" placeholder="https://proje-default-rtdb.europe-west1.firebasedatabase.app" required />
+          </label>
+          <label>
+            projectId
+            <input id="fbProjectId" type="text" placeholder="proje-id" />
+          </label>
+          <button type="button" id="btnSaveFb" class="btn primary">Kaydet ve paylaşımı aç</button>
+        </form>
+        <p class="note">
+          Kayıttan sonra rozet <strong>Canlı paylaşım açık</strong> olur. Aile linki
+          bu ayarı da taşır; diğer üyelerin ekstra kurulum yapması gerekmez.
+        </p>
+      </div>
+    </section>
+
+    <!-- Ana uygulama -->
+    <section id="appScreen" class="screen hidden">
+      <div class="hero">
+        <h1 id="brandTitle" class="brand">Ediz Okul Parası</h1>
+        <p class="metric-label">Toplanması gereken</p>
+        <p id="kalanTutar" class="metric">0,00</p>
+        <p class="metric-unit">Türk Lirası</p>
+        <p class="lede tight">
+          Hedef <span id="hedefTutar">0,00</span> ₺ · Toplanan
+          <span id="toplananTutar">0,00</span> ₺
+        </p>
+        <div class="progress" aria-hidden="true">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+        <p id="progressLabel" class="progress-label">%0 tamamlandı</p>
+        <div class="cta-row">
+          <button type="button" id="btnAddPay" class="btn primary">Ödeme ekle</button>
+          <button type="button" id="btnEditHedef" class="btn ghost">Hedefi düzenle</button>
+        </div>
+      </div>
+
+      <section class="share-block">
+        <h2>Aile linki</h2>
+        <div class="share-row">
+          <input id="shareUrl" type="text" readonly />
+          <button type="button" id="btnCopyLink" class="btn ghost">Kopyala</button>
+          <button type="button" id="btnShareNative" class="btn ghost">Paylaş</button>
+        </div>
+        <button type="button" id="btnOpenSetupFromApp" class="linkish">Paylaşım kurulumu</button>
+      </section>
+
+      <section class="list-block">
+        <div class="list-head">
+          <h2>Ödemeler</h2>
+          <div class="list-actions">
+            <button type="button" id="btnExport" class="linkish">Yedek al</button>
+            <button type="button" id="btnImport" class="linkish">Yedek yükle</button>
+            <input id="importFile" type="file" accept="application/json,.json" hidden />
+          </div>
+        </div>
+        <ul id="paymentList" class="payment-list"></ul>
+      </section>
+    </section>
+
+    <!-- Ödeme diyaloğu -->
+    <dialog id="payDialog" class="sheet">
+      <form id="payForm">
+        <header>
+          <h3>Ödeme ekle</h3>
+          <button type="button" class="icon-btn" data-close="#payDialog" aria-label="Kapat">✕</button>
+        </header>
+        <label>
+          Kimden
+          <input id="payName" type="text" placeholder="İsim" maxlength="40" required />
+        </label>
+        <fieldset class="seg">
+          <legend>Para birimi</legend>
+          <label><input type="radio" name="currency" value="TRY" checked /> TL</label>
+          <label><input type="radio" name="currency" value="USD" /> USD</label>
+        </fieldset>
+        <label>
+          Tutar
+          <input id="payAmount" type="number" inputmode="decimal" min="0.01" step="0.01" required />
+        </label>
+        <label>
+          Tarih ve saat
+          <input id="payDate" type="datetime-local" required />
+        </label>
+        <div id="rateBox" class="rate-box hidden">
+          <p id="rateStatus" class="rate-status">Kur alınıyor…</p>
+          <label>
+            Kullanılacak kur (1 USD = ? ₺)
+            <input id="rateManual" type="number" inputmode="decimal" min="0.0001" step="0.0001" />
+          </label>
+          <p class="hint">Varsayılan: TCMB döviz alış. Farklıysa düzeltebilirsin.</p>
+        </div>
+        <p class="preview">TL karşılığı: <strong id="tlPreview">—</strong></p>
+        <button type="submit" class="btn primary wide">Kaydet</button>
+      </form>
+    </dialog>
+
+    <dialog id="hedefDialog" class="sheet">
+      <form id="hedefForm">
+        <header>
+          <h3>Hedef tutar</h3>
+          <button type="button" class="icon-btn" data-close="#hedefDialog" aria-label="Kapat">✕</button>
+        </header>
+        <label>
+          Hedef (₺)
+          <input id="hedefInput" type="number" inputmode="decimal" min="0" step="0.01" required />
+        </label>
+        <button type="submit" class="btn primary wide">Kaydet</button>
+      </form>
+    </dialog>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script src="config.js"></script>
+    <script src="js/rates.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
