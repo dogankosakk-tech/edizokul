@@ -262,6 +262,7 @@
       kurKaynak: payment.kurKaynak ?? null,
       kurModu: payment.kurModu || (payment.paraBirimi === "USD" ? "canli" : "sabit"),
       tlKarsilik: Number(payment.tlKarsilik),
+      foto: payment.foto || null,
       not: payment.not || "",
       eklenme: new Date().toISOString(),
     };
@@ -273,6 +274,8 @@
     const idx = (room.odemeler || []).findIndex((p) => p.id === paymentId);
     if (idx < 0) throw new Error("Ödeme bulunamadı");
     const prev = room.odemeler[idx];
+    const nextFoto =
+      payment.foto === undefined ? prev.foto || null : payment.foto || null;
     room.odemeler[idx] = {
       ...prev,
       ad: payment.ad?.trim() || "Anonim",
@@ -283,6 +286,7 @@
       kurKaynak: payment.kurKaynak ?? null,
       kurModu: payment.kurModu || (payment.paraBirimi === "USD" ? "canli" : "sabit"),
       tlKarsilik: Number(payment.tlKarsilik),
+      foto: nextFoto,
       not: payment.not || prev.not || "",
       guncelleme: new Date().toISOString(),
     };

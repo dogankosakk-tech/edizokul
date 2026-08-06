@@ -463,6 +463,86 @@ input:focus {
   font-size: 0.75rem;
 }
 
+.photo-field {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  background: rgba(11, 61, 46, 0.05);
+}
+
+.photo-label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-btn {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.photo-preview {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.photo-preview img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  background: #f4f7f5;
+}
+
+.dekont-thumb {
+  margin-top: 0.45rem;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  width: 72px;
+  height: 72px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.dekont-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-viewer {
+  width: min(100%, 640px);
+}
+
+.photo-viewer header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.15rem 0.5rem;
+}
+
+.photo-viewer img {
+  display: block;
+  width: 100%;
+  max-height: 75dvh;
+  object-fit: contain;
+  background: #111;
+  padding: 0.5rem 0 1rem;
+}
+
 .empty {
   color: var(--ink-soft);
   padding: 0.75rem 0;
