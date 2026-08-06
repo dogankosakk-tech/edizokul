@@ -1,0 +1,15 @@
+{
+  "source": "TCMB",
+  "date": "2026-06-24",
+  "tcmbDate": "24.06.2026",
+  "bulletin": "2026/115",
+  "usd": {
+    "unit": 1,
+    "forexBuying": 46.4099,
+    "forexSelling": 46.4935,
+    "banknoteBuying": 46.3774,
+    "banknoteSelling": 46.5633
+  },
+  "rateUsed": "forexBuying",
+  "usdTry": 46.4099
+}
