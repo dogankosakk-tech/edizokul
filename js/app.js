@@ -250,7 +250,7 @@
       else show($("#welcomeScreen"));
     });
 
-    $("#btnSaveFb").addEventListener("click", () => {
+    $("#btnSaveFb").addEventListener("click", async () => {
       try {
         EdizStore.saveFirebaseConfig({
           apiKey: $("#fbApiKey").value,
@@ -259,12 +259,16 @@
           projectId: $("#fbProjectId").value,
         });
         setCloudBadge();
-        toast("Canlı paylaşım açıldı", "ok");
-        hide($("#setupScreen"));
         if (state.room) {
-          $("#shareUrl").value = EdizStore.roomUrl(state.room.id);
+          // Yereldeki odayı buluta taşı
+          state.room = await EdizStore.saveRoom(state.room);
+          await bindRoom(state.room);
+          toast("Canlı paylaşım açıldı — oda buluta taşındı", "ok");
+          hide($("#setupScreen"));
           show($("#appScreen"));
         } else {
+          toast("Canlı paylaşım açıldı", "ok");
+          hide($("#setupScreen"));
           show($("#welcomeScreen"));
         }
       } catch (e) {
