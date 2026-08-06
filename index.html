@@ -20,7 +20,12 @@
 
     <header class="top">
       <p class="eyebrow">Okul destek fonu</p>
-      <span id="cloudBadge" class="badge" data-on="0">Yerel mod</span>
+      <button type="button" id="btnCopyLink" class="icon-btn copy-btn hidden" aria-label="Aile linkini kopyala" title="Linki kopyala">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2" />
+          <path d="M5 15V7a2 2 0 0 1 2-2h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
     </header>
 
     <!-- Karşılama -->
@@ -28,7 +33,7 @@
       <div class="hero welcome-hero">
         <h1 class="brand">Ediz Okul</h1>
         <p class="lede">
-          Ailece okul parasını takip et. USD ödemeler seçtiğin tarih/saatteki
+          Ailece okul parasını takip et. USD ödemeler
           <strong>TCMB döviz alış</strong> kuruyla TL’ye çevrilir.
         </p>
         <form class="welcome-form" onsubmit="return false;">
@@ -55,7 +60,7 @@
         <h2>Paylaşımı aç (tek sefer)</h2>
         <p>
           Sunucu çalıştırmana gerek yok. Ücretsiz Firebase ile aile aynı linkten
-          canlı görür. Bilgileri buraya yapıştırman yeterli — dosya düzenlemen gerekmez.
+          canlı görür. Bilgileri buraya yapıştırman yeterli.
         </p>
         <ol class="steps">
           <li>
@@ -70,7 +75,7 @@
             Project settings → Your apps → Web → <code>firebaseConfig</code> kopyala
           </li>
           <li>
-            Rules (aile içi link; yalnızca güvendiklerinle paylaş):
+            Rules (yalnızca güvendiklerinle paylaş):
             <pre class="code">{
   "rules": {
     "rooms": {
@@ -103,8 +108,7 @@
           <button type="button" id="btnSaveFb" class="btn primary">Kaydet ve paylaşımı aç</button>
         </form>
         <p class="note">
-          Kayıttan sonra rozet <strong>Canlı paylaşım açık</strong> olur. Aile linki
-          bu ayarı da taşır; diğer üyelerin ekstra kurulum yapması gerekmez.
+          Kayıttan sonra üstteki kopyala ikonuyla aile linkini paylaşabilirsin.
         </p>
       </div>
     </section>
@@ -114,11 +118,11 @@
       <div class="hero">
         <h1 id="brandTitle" class="brand">Ediz Okul Parası</h1>
         <p class="metric-label">Toplanması gereken</p>
-        <p id="kalanTutar" class="metric">0,00</p>
-        <p class="metric-unit">Türk Lirası</p>
-        <p class="lede tight">
-          Hedef <span id="hedefTutar">0,00</span> ₺ · Toplanan
-          <span id="toplananTutar">0,00</span> ₺
+        <p id="kalanTutar" class="metric">0,00 ₺</p>
+        <p id="kalanUsd" class="metric-alt">≈ 0,00 $</p>
+        <p class="summary-line">
+          <span>Hedef <strong id="hedefTutar">0,00 ₺</strong> <span id="hedefUsd" class="muted">· 0,00 $</span></span>
+          <span>Toplanan <strong id="toplananTutar">0,00 ₺</strong> <span id="toplananUsd" class="muted">· 0,00 $</span></span>
         </p>
         <div class="progress" aria-hidden="true">
           <div id="progressFill" class="progress-fill"></div>
@@ -130,24 +134,9 @@
         </div>
       </div>
 
-      <section class="share-block">
-        <h2>Aile linki</h2>
-        <div class="share-row">
-          <input id="shareUrl" type="text" readonly />
-          <button type="button" id="btnCopyLink" class="btn ghost">Kopyala</button>
-          <button type="button" id="btnShareNative" class="btn ghost">Paylaş</button>
-        </div>
-        <button type="button" id="btnOpenSetupFromApp" class="linkish">Paylaşım kurulumu</button>
-      </section>
-
       <section class="list-block">
         <div class="list-head">
           <h2>Ödemeler</h2>
-          <div class="list-actions">
-            <button type="button" id="btnExport" class="linkish">Yedek al</button>
-            <button type="button" id="btnImport" class="linkish">Yedek yükle</button>
-            <input id="importFile" type="file" accept="application/json,.json" hidden />
-          </div>
         </div>
         <ul id="paymentList" class="payment-list"></ul>
       </section>
@@ -157,9 +146,10 @@
     <dialog id="payDialog" class="sheet">
       <form id="payForm">
         <header>
-          <h3>Ödeme ekle</h3>
+          <h3 id="payDialogTitle">Ödeme ekle</h3>
           <button type="button" class="icon-btn" data-close="#payDialog" aria-label="Kapat">✕</button>
         </header>
+        <input type="hidden" id="payEditId" value="" />
         <label>
           Kimden
           <input id="payName" type="text" placeholder="İsim" maxlength="40" required />
@@ -190,7 +180,7 @@
           <p class="hint" id="rateHint">Bozdurulana kadar toplam anlık kura göre güncellenir.</p>
         </div>
         <p class="preview">TL karşılığı: <strong id="tlPreview">—</strong></p>
-        <button type="submit" class="btn primary wide">Kaydet</button>
+        <button type="submit" class="btn primary wide" id="paySubmitBtn">Kaydet</button>
       </form>
     </dialog>
 
