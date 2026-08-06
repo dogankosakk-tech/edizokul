@@ -15,6 +15,8 @@
     room: null,
     unsubscribe: null,
     ratePreview: null,
+    liveRate: null,
+    liveRateLabel: "",
   };
 
   function show(el) {
@@ -44,11 +46,28 @@
     }
   }
 
-  function render() {
+  async function ensureLiveRate() {
+    const hasLive = (state.room?.odemeler || []).some((p) => EdizStore.isLiveUsd(p));
+    const addingLive =
+      $('input[name="currency"]:checked')?.value === "USD" && $("#payLiveRate")?.checked;
+    if (!hasLive && !addingLive && state.liveRate) return state.liveRate;
+    try {
+      const info = await EdizRates.getLiveUsdTry();
+      state.liveRate = info.rate;
+      state.liveRateLabel = info.label;
+      return info.rate;
+    } catch (e) {
+      console.error(e);
+      return state.liveRate;
+    }
+  }
+
+  async function render() {
     const room = state.room;
     if (!room) return;
 
-    const { toplanan, hedef, kalan, yuzde } = EdizStore.totals(room);
+    const liveRate = await ensureLiveRate();
+    const { toplanan, hedef, kalan, yuzde } = EdizStore.totals(room, liveRate);
     $("#brandTitle").textContent = room.baslik || "Ediz Okul Parası";
     $("#kalanTutar").textContent = moneyTR(kalan);
     $("#toplananTutar").textContent = moneyTR(toplanan);
@@ -57,6 +76,21 @@
     $("#progressLabel").textContent = `%${yuzde.toFixed(0)} tamamlandı`;
     $("#shareUrl").value = EdizStore.roomUrl(room.id);
     $("#hedefInput").value = hedef || "";
+
+    let banner = $("#liveRateBanner");
+    const hasLive = (room.odemeler || []).some((p) => EdizStore.isLiveUsd(p));
+    if (hasLive && liveRate) {
+      if (!banner) {
+        banner = document.createElement("p");
+        banner.id = "liveRateBanner";
+        banner.className = "live-rate-banner";
+        $("#progressLabel")?.after(banner);
+      }
+      banner.textContent = `Anlık kur: ${state.liveRateLabel || liveRate} (bozdurulmamış USD)`;
+      show(banner);
+    } else if (banner) {
+      hide(banner);
+    }
 
     const list = $("#paymentList");
     list.innerHTML = "";
@@ -75,19 +109,39 @@
               minute: "2-digit",
             })
           : "";
+        const live = EdizStore.isLiveUsd(p);
+        const tl = EdizStore.paymentTl(p, liveRate);
+        const rateShown = live && liveRate ? liveRate : p.kur;
         const raw =
           p.paraBirimi === "USD"
-            ? `${moneyTR(p.tutar)} $ → ${moneyTR(p.tlKarsilik)} ₺`
-            : `${moneyTR(p.tlKarsilik)} ₺`;
+            ? `${moneyTR(p.tutar)} $ → ${moneyTR(tl)} ₺`
+            : `${moneyTR(tl)} ₺`;
         li.innerHTML = `
           <div class="payment-main">
             <strong>${escapeHtml(p.ad)}</strong>
-            <span class="meta">${escapeHtml(when)}${p.kur ? ` · kur ${Number(p.kur).toLocaleString("tr-TR", { maximumFractionDigits: 4 })}` : ""}</span>
-            ${p.kurKaynak ? `<span class="source">${escapeHtml(p.kurKaynak)}</span>` : ""}
+            <span class="meta">${escapeHtml(when)}${
+              rateShown
+                ? ` · kur ${Number(rateShown).toLocaleString("tr-TR", { maximumFractionDigits: 4 })}`
+                : ""
+            }</span>
+            ${
+              live
+                ? `<span class="pill">Anlık kur</span>`
+                : p.kurKaynak
+                  ? `<span class="source">${escapeHtml(p.kurKaynak)}</span>`
+                  : ""
+            }
           </div>
           <div class="payment-amount">
             <span>${raw}</span>
-            <button type="button" class="icon-btn" data-del="${p.id}" aria-label="Sil">✕</button>
+            <div class="row-actions">
+              ${
+                live
+                  ? `<button type="button" class="btn ghost tiny" data-lock="${p.id}">Bozduruldu</button>`
+                  : ""
+              }
+              <button type="button" class="icon-btn" data-del="${p.id}" aria-label="Sil">✕</button>
+            </div>
           </div>`;
         list.appendChild(li);
       }
@@ -116,7 +170,6 @@
       room.id,
       (fresh) => {
         if (!fresh) return;
-        // Basit çakışma: gelen daha yeni veya aynıysa uygula
         if (!state.room || (fresh.version || 0) >= (state.room.version || 0)) {
           state.room = fresh;
           render();
@@ -124,7 +177,7 @@
       },
       () => toast("Bağlantı koptu, yeniden deneniyor…", "warn")
     );
-    render();
+    await render();
     setCloudBadge();
   }
 
@@ -157,13 +210,42 @@
   async function refreshRatePreview() {
     const currency = $('input[name="currency"]:checked')?.value || "TRY";
     const box = $("#rateBox");
+    const liveLabel = $("#liveRateLabel");
+    const live = $("#payLiveRate")?.checked;
+
     if (currency !== "USD") {
       hide(box);
+      hide(liveLabel);
       state.ratePreview = null;
       updateTlPreview();
       return;
     }
+
+    show(liveLabel);
     show(box);
+
+    if (live) {
+      hide($("#rateManualLabel"));
+      $("#rateHint").textContent =
+        "Bozdurulana kadar toplam her açılışta güncel TCMB kuruyla hesaplanır.";
+      $("#rateStatus").textContent = "Anlık kur alınıyor…";
+      try {
+        const info = await EdizRates.getLiveUsdTry();
+        state.ratePreview = info;
+        state.liveRate = info.rate;
+        state.liveRateLabel = info.label;
+        $("#rateStatus").textContent = `Anlık · ${info.label}`;
+        $("#rateManual").value = info.rate;
+        updateTlPreview();
+      } catch (e) {
+        console.error(e);
+        $("#rateStatus").textContent = "Kur alınamadı";
+      }
+      return;
+    }
+
+    show($("#rateManualLabel"));
+    $("#rateHint").textContent = "Varsayılan: TCMB döviz alış. Farklıysa düzeltebilirsin.";
     $("#rateStatus").textContent = "Kur alınıyor…";
     const tarih = $("#payDate").value || defaultDateTimeLocal();
     try {
@@ -191,12 +273,13 @@
       out.textContent = `${moneyTR(amount)} ₺`;
       return;
     }
-    const rate = parseFloat($("#rateManual").value) || state.ratePreview?.rate;
+    const rate = parseFloat($("#rateManual").value) || state.ratePreview?.rate || state.liveRate;
     if (!rate) {
       out.textContent = "Kur gerekli";
       return;
     }
-    out.textContent = `${moneyTR(EdizRates.usdToTry(amount, rate))} ₺`;
+    const suffix = $("#payLiveRate")?.checked ? " (anlık)" : "";
+    out.textContent = `${moneyTR(EdizRates.usdToTry(amount, rate))} ₺${suffix}`;
   }
 
   function openSheet(id) {
@@ -307,8 +390,10 @@
       $("#payAmount").value = "";
       $("#payDate").value = defaultDateTimeLocal();
       $('input[name="currency"][value="TRY"]').checked = true;
+      if ($("#payLiveRate")) $("#payLiveRate").checked = true;
       $("#rateManual").value = "";
       hide($("#rateBox"));
+      hide($("#liveRateLabel"));
       $("#tlPreview").textContent = "—";
       openSheet("#payDialog");
     });
@@ -321,6 +406,7 @@
     $$('input[name="currency"]').forEach((el) =>
       el.addEventListener("change", refreshRatePreview)
     );
+    $("#payLiveRate")?.addEventListener("change", refreshRatePreview);
     $("#payDate").addEventListener("change", refreshRatePreview);
     $("#payAmount").addEventListener("input", updateTlPreview);
     $("#rateManual").addEventListener("input", updateTlPreview);
@@ -332,6 +418,7 @@
       const tutar = parseFloat($("#payAmount").value);
       const paraBirimi = $('input[name="currency"]:checked').value;
       const tarih = $("#payDate").value;
+      const liveMode = paraBirimi === "USD" && $("#payLiveRate")?.checked;
       if (!tutar || tutar <= 0) {
         toast("Geçerli tutar gir", "warn");
         return;
@@ -340,17 +427,26 @@
       let kur = null;
       let kurKaynak = null;
       let tlKarsilik = tutar;
+      let kurModu = "sabit";
 
       if (paraBirimi === "USD") {
-        kur = parseFloat($("#rateManual").value);
+        kur = parseFloat($("#rateManual").value) || state.liveRate;
         if (!kur || kur <= 0) {
           toast("USD için kur gerekli", "warn");
           return;
         }
         tlKarsilik = EdizRates.usdToTry(tutar, kur);
-        kurKaynak = state.ratePreview?.label || `Elle girilen kur · ${kur}`;
-        if (state.ratePreview && Math.abs(state.ratePreview.rate - kur) > 0.0001) {
-          kurKaynak = `Elle düzeltildi · ${kur.toLocaleString("tr-TR", { maximumFractionDigits: 4 })}`;
+        if (liveMode) {
+          kurModu = "canli";
+          kurKaynak = `Anlık kur · ${state.liveRateLabel || kur}`;
+        } else {
+          kurModu = "sabit";
+          kurKaynak = state.ratePreview?.label || `Elle girilen kur · ${kur}`;
+          if (state.ratePreview && Math.abs(state.ratePreview.rate - kur) > 0.0001) {
+            kurKaynak = `Elle düzeltildi · ${kur.toLocaleString("tr-TR", {
+              maximumFractionDigits: 4,
+            })}`;
+          }
         }
       }
 
@@ -362,12 +458,13 @@
           tarih,
           kur,
           kurKaynak,
+          kurModu,
           tlKarsilik,
         });
         state.room = room;
-        render();
+        await render();
         closeSheet("#payDialog");
-        toast("Ödeme eklendi", "ok");
+        toast(liveMode ? "USD eklendi (anlık kur)" : "Ödeme eklendi", "ok");
       } catch (err) {
         toast(err.message, "error");
       }
@@ -378,7 +475,7 @@
       const hedef = parseFloat($("#hedefInput").value) || 0;
       try {
         state.room = await EdizStore.updateHedef(state.room, hedef);
-        render();
+        await render();
         closeSheet("#hedefDialog");
         toast("Hedef güncellendi", "ok");
       } catch (err) {
@@ -387,13 +484,41 @@
     });
 
     $("#paymentList").addEventListener("click", async (e) => {
+      const lockBtn = e.target.closest("[data-lock]");
+      if (lockBtn) {
+        const id = lockBtn.getAttribute("data-lock");
+        try {
+          const info = await EdizRates.getLiveUsdTry();
+          const payment = state.room.odemeler.find((p) => p.id === id);
+          if (!payment) return;
+          const tl = EdizRates.usdToTry(payment.tutar, info.rate);
+          if (
+            !confirm(
+              `Bu USD ödemeyi bozduruldu sayıp kuru sabitlemek istiyor musun?\n${info.label}`
+            )
+          ) {
+            return;
+          }
+          state.room = await EdizStore.lockPaymentRate(state.room, id, {
+            kur: info.rate,
+            kurKaynak: `Bozduruldu · ${info.label}`,
+            tlKarsilik: tl,
+          });
+          await render();
+          toast("Kur sabitlendi", "ok");
+        } catch (err) {
+          toast(err.message, "error");
+        }
+        return;
+      }
+
       const btn = e.target.closest("[data-del]");
       if (!btn) return;
       const id = btn.getAttribute("data-del");
       if (!confirm("Bu ödemeyi silmek istiyor musun?")) return;
       try {
         state.room = await EdizStore.removePayment(state.room, id);
-        render();
+        await render();
         toast("Ödeme silindi", "ok");
       } catch (err) {
         toast(err.message, "error");

@@ -364,6 +364,12 @@ input:focus {
   white-space: nowrap;
 }
 
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .icon-btn {
   appearance: none;
   border: none;
@@ -374,6 +380,49 @@ input:focus {
   cursor: pointer;
   color: var(--ink-soft);
   font-size: 0.85rem;
+}
+
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.check-row input {
+  width: auto;
+  margin-top: 0.2rem;
+}
+
+.pill {
+  display: inline-block;
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(31, 107, 82, 0.12);
+  color: var(--brand);
+}
+
+.pill.warn {
+  background: rgba(196, 92, 38, 0.12);
+  color: #8a3d14;
+}
+
+.live-rate-banner {
+  margin: 0 0 1rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--brand-2);
+}
+
+.btn.tiny {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
 }
 
 .empty {

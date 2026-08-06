@@ -213,6 +213,11 @@
     };
   }
 
+  /** Bugünün / en güncel TCMB kuru (bozdurulmamış USD için) */
+  async function getLiveUsdTry() {
+    return getUsdTry(new Date());
+  }
+
   function formatRateLabel(data) {
     const r = Number(data.usdTry).toLocaleString("tr-TR", {
       minimumFractionDigits: 2,
@@ -231,6 +236,7 @@
   global.EdizRates = {
     toISODate,
     getUsdTry,
+    getLiveUsdTry,
     usdToTry,
     formatRateLabel,
   };

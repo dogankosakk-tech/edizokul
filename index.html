@@ -173,17 +173,21 @@
           Tutar
           <input id="payAmount" type="number" inputmode="decimal" min="0.01" step="0.01" required />
         </label>
-        <label>
+        <label id="liveRateLabel" class="check-row hidden">
+          <input id="payLiveRate" type="checkbox" checked />
+          <span>Henüz bozdurulmadı — anlık TCMB kuruyla hesapla</span>
+        </label>
+        <label id="payDateLabel">
           Tarih ve saat
           <input id="payDate" type="datetime-local" required />
         </label>
         <div id="rateBox" class="rate-box hidden">
           <p id="rateStatus" class="rate-status">Kur alınıyor…</p>
-          <label>
+          <label id="rateManualLabel" class="hidden">
             Kullanılacak kur (1 USD = ? ₺)
             <input id="rateManual" type="number" inputmode="decimal" min="0.0001" step="0.0001" />
           </label>
-          <p class="hint">Varsayılan: TCMB döviz alış. Farklıysa düzeltebilirsin.</p>
+          <p class="hint" id="rateHint">Bozdurulana kadar toplam anlık kura göre güncellenir.</p>
         </div>
         <p class="preview">TL karşılığı: <strong id="tlPreview">—</strong></p>
         <button type="submit" class="btn primary wide">Kaydet</button>
