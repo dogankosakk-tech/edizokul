@@ -145,12 +145,50 @@ body {
 .metric {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(2.8rem, 12vw, 4.2rem);
+  font-size: clamp(2.4rem, 11vw, 3.8rem);
   font-weight: 700;
   letter-spacing: -0.04em;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
   animation: pop 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.metric-alt {
+  margin: 0.15rem 0 0.85rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 5vw, 1.7rem);
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: -0.02em;
+}
+
+.summary-line {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+.summary-line strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.summary-line .muted {
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.copy-btn {
+  width: 2.35rem;
+  height: 2.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand);
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--line);
 }
 
 @keyframes pop {
@@ -364,6 +402,12 @@ input:focus {
   white-space: nowrap;
 }
 
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .icon-btn {
   appearance: none;
   border: none;
@@ -374,6 +418,49 @@ input:focus {
   cursor: pointer;
   color: var(--ink-soft);
   font-size: 0.85rem;
+}
+
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.check-row input {
+  width: auto;
+  margin-top: 0.2rem;
+}
+
+.pill {
+  display: inline-block;
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(31, 107, 82, 0.12);
+  color: var(--brand);
+}
+
+.pill.warn {
+  background: rgba(196, 92, 38, 0.12);
+  color: #8a3d14;
+}
+
+.live-rate-banner {
+  margin: 0 0 1rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--brand-2);
+}
+
+.btn.tiny {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
 }
 
 .empty {

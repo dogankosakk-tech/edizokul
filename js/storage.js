@@ -237,6 +237,20 @@
     return room;
   }
 
+  /** USD ve kurModu yoksa canli say (henüz bozdurulmamış) */
+  function isLiveUsd(payment) {
+    if (payment.paraBirimi !== "USD") return false;
+    if (payment.kurModu === "sabit") return false;
+    return payment.kurModu === "canli" || payment.kurModu == null;
+  }
+
+  function paymentTl(payment, liveRate) {
+    if (isLiveUsd(payment) && liveRate) {
+      return Math.round(Number(payment.tutar) * liveRate * 100) / 100;
+    }
+    return Number(payment.tlKarsilik) || 0;
+  }
+
   async function addPayment(room, payment) {
     const p = {
       id: paymentId(),
@@ -246,6 +260,7 @@
       tarih: payment.tarih,
       kur: payment.kur ?? null,
       kurKaynak: payment.kurKaynak ?? null,
+      kurModu: payment.kurModu || (payment.paraBirimi === "USD" ? "canli" : "sabit"),
       tlKarsilik: Number(payment.tlKarsilik),
       not: payment.not || "",
       eklenme: new Date().toISOString(),
@@ -254,8 +269,44 @@
     return saveRoom(room);
   }
 
+  async function updatePayment(room, paymentId, payment) {
+    const idx = (room.odemeler || []).findIndex((p) => p.id === paymentId);
+    if (idx < 0) throw new Error("Ödeme bulunamadı");
+    const prev = room.odemeler[idx];
+    room.odemeler[idx] = {
+      ...prev,
+      ad: payment.ad?.trim() || "Anonim",
+      tutar: Number(payment.tutar),
+      paraBirimi: payment.paraBirimi === "USD" ? "USD" : "TRY",
+      tarih: payment.tarih,
+      kur: payment.kur ?? null,
+      kurKaynak: payment.kurKaynak ?? null,
+      kurModu: payment.kurModu || (payment.paraBirimi === "USD" ? "canli" : "sabit"),
+      tlKarsilik: Number(payment.tlKarsilik),
+      not: payment.not || prev.not || "",
+      guncelleme: new Date().toISOString(),
+    };
+    return saveRoom(room);
+  }
+
   async function removePayment(room, paymentIdToRemove) {
     room.odemeler = (room.odemeler || []).filter((p) => p.id !== paymentIdToRemove);
+    return saveRoom(room);
+  }
+
+  /** Bozduruldu: anlık kuru sabitle */
+  async function lockPaymentRate(room, paymentId, { kur, kurKaynak, tlKarsilik }) {
+    room.odemeler = (room.odemeler || []).map((p) => {
+      if (p.id !== paymentId) return p;
+      return {
+        ...p,
+        kurModu: "sabit",
+        kur,
+        kurKaynak,
+        tlKarsilik,
+        bozdurma: new Date().toISOString(),
+      };
+    });
     return saveRoom(room);
   }
 
@@ -264,8 +315,11 @@
     return saveRoom(room);
   }
 
-  function totals(room) {
-    const toplanan = (room.odemeler || []).reduce((s, p) => s + (Number(p.tlKarsilik) || 0), 0);
+  function totals(room, liveRate) {
+    const toplanan = (room.odemeler || []).reduce(
+      (s, p) => s + paymentTl(p, liveRate),
+      0
+    );
     const hedef = Number(room.hedef) || 0;
     const kalan = Math.max(0, hedef - toplanan);
     const yuzde = hedef > 0 ? Math.min(100, (toplanan / hedef) * 100) : 0;
@@ -297,10 +351,14 @@
     loadRoom,
     saveRoom,
     addPayment,
+    updatePayment,
     removePayment,
+    lockPaymentRate,
     updateHedef,
     subscribe,
     totals,
+    isLiveUsd,
+    paymentTl,
     exportJson,
     importJson,
     getFirebase,
