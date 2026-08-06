@@ -24,6 +24,8 @@
     liveRate: null,
     liveRateLabel: "",
     editingId: null,
+    pendingFoto: null,
+    fotoRemoved: false,
   };
 
   function show(el) {
@@ -47,6 +49,44 @@
     return Math.round((tl / rate) * 100) / 100;
   }
 
+  function setPhotoPreview(dataUrl) {
+    const wrap = $("#photoPreviewWrap");
+    const img = $("#photoPreview");
+    const clearBtn = $("#btnClearPhoto");
+    if (dataUrl) {
+      img.src = dataUrl;
+      show(wrap);
+      show(clearBtn);
+    } else {
+      img.removeAttribute("src");
+      hide(wrap);
+      hide(clearBtn);
+    }
+  }
+
+  function clearPhotoInputs() {
+    if ($("#payPhoto")) $("#payPhoto").value = "";
+    if ($("#payPhotoCam")) $("#payPhotoCam").value = "";
+  }
+
+  async function handlePhotoFile(file) {
+    if (!file) return;
+    $("#photoStatus").textContent = "Sıkıştırılıyor…";
+    try {
+      const result = await EdizImage.compressReceipt(file);
+      state.pendingFoto = result.dataUrl;
+      state.fotoRemoved = false;
+      setPhotoPreview(result.dataUrl);
+      const kb = Math.round(result.bytes / 1024);
+      $("#photoStatus").textContent = `Dekont hazır (~${kb} KB)`;
+    } catch (e) {
+      toast(e.message, "error");
+      $("#photoStatus").textContent = "";
+    } finally {
+      clearPhotoInputs();
+    }
+  }
+
   async function ensureLiveRate(force = false) {
     if (!force && state.liveRate) return state.liveRate;
     try {
@@ -62,6 +102,8 @@
 
   function resetPayForm() {
     state.editingId = null;
+    state.pendingFoto = null;
+    state.fotoRemoved = false;
     $("#payEditId").value = "";
     $("#payDialogTitle").textContent = "Ödeme ekle";
     $("#paySubmitBtn").textContent = "Kaydet";
@@ -74,10 +116,15 @@
     hide($("#rateBox"));
     hide($("#liveRateLabel"));
     $("#tlPreview").textContent = "—";
+    $("#photoStatus").textContent = "";
+    setPhotoPreview(null);
+    clearPhotoInputs();
   }
 
   async function openEditPayment(payment) {
     state.editingId = payment.id;
+    state.pendingFoto = null;
+    state.fotoRemoved = false;
     $("#payEditId").value = payment.id;
     $("#payDialogTitle").textContent = "Ödemeyi düzenle";
     $("#paySubmitBtn").textContent = "Güncelle";
@@ -92,6 +139,13 @@
       $("#payLiveRate").checked = EdizStore.isLiveUsd(payment);
     }
     if (payment.kur) $("#rateManual").value = payment.kur;
+    if (payment.foto) {
+      setPhotoPreview(payment.foto);
+      $("#photoStatus").textContent = "Mevcut dekont";
+    } else {
+      setPhotoPreview(null);
+      $("#photoStatus").textContent = "";
+    }
     openSheet("#payDialog");
     await refreshRatePreview();
     updateTlPreview();
@@ -177,6 +231,13 @@
                 : p.kurKaynak
                   ? `<span class="source">${escapeHtml(p.kurKaynak)}</span>`
                   : ""
+            }
+            ${
+              p.foto
+                ? `<button type="button" class="dekont-thumb" data-photo="${p.id}" aria-label="Dekontu gör">
+                    <img src="${p.foto}" alt="Dekont" />
+                  </button>`
+                : ""
             }
           </div>
           <div class="payment-amount">
@@ -373,7 +434,24 @@
       }
     }
 
-    return { ad, tutar, paraBirimi, tarih, kur, kurKaynak, kurModu, tlKarsilik, liveMode };
+    let foto;
+    if (state.pendingFoto) foto = state.pendingFoto;
+    else if (state.fotoRemoved) foto = null;
+    else if (state.editingId) foto = undefined; // mevcut kalsın
+    else foto = null;
+
+    return {
+      ad,
+      tutar,
+      paraBirimi,
+      tarih,
+      kur,
+      kurKaynak,
+      kurModu,
+      tlKarsilik,
+      foto,
+      liveMode,
+    };
   }
 
   function wire() {
@@ -486,7 +564,7 @@
           state.room = await EdizStore.addPayment(state.room, payment);
           toast(liveMode ? "USD eklendi (anlık kur)" : "Ödeme eklendi", "ok");
         }
-        state.editingId = null;
+        resetPayForm();
         await render();
         closeSheet("#payDialog");
       } catch (err) {
@@ -508,6 +586,17 @@
     });
 
     $("#paymentList").addEventListener("click", async (e) => {
+      const photoBtn = e.target.closest("[data-photo]");
+      if (photoBtn) {
+        const id = photoBtn.getAttribute("data-photo");
+        const payment = state.room.odemeler.find((p) => p.id === id);
+        if (payment?.foto) {
+          $("#photoViewerImg").src = payment.foto;
+          openSheet("#photoDialog");
+        }
+        return;
+      }
+
       const editBtn = e.target.closest("[data-edit]");
       if (editBtn) {
         const id = editBtn.getAttribute("data-edit");
@@ -557,11 +646,28 @@
       }
     });
 
+    $("#payPhoto")?.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      handlePhotoFile(file);
+    });
+    $("#payPhotoCam")?.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      handlePhotoFile(file);
+    });
+    $("#btnClearPhoto")?.addEventListener("click", () => {
+      state.pendingFoto = null;
+      state.fotoRemoved = true;
+      setPhotoPreview(null);
+      $("#photoStatus").textContent = "Dekont kaldırıldı";
+      clearPhotoInputs();
+    });
+
     $$("[data-close]").forEach((btn) =>
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-close");
         closeSheet(id);
         if (id === "#payDialog") resetPayForm();
+        if (id === "#photoDialog") $("#photoViewerImg").removeAttribute("src");
       })
     );
   }

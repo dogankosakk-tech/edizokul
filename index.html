@@ -180,6 +180,24 @@
           <p class="hint" id="rateHint">Bozdurulana kadar toplam anlık kura göre güncellenir.</p>
         </div>
         <p class="preview">TL karşılığı: <strong id="tlPreview">—</strong></p>
+        <div class="photo-field">
+          <span class="photo-label">Dekont fotoğrafı (isteğe bağlı)</span>
+          <div class="photo-actions">
+            <label class="btn ghost tiny file-btn">
+              Galeri / Dosya
+              <input id="payPhoto" type="file" accept="image/*" hidden />
+            </label>
+            <label class="btn ghost tiny file-btn">
+              Kamerayla çek
+              <input id="payPhotoCam" type="file" accept="image/*" capture="environment" hidden />
+            </label>
+            <button type="button" id="btnClearPhoto" class="linkish hidden">Kaldır</button>
+          </div>
+          <div id="photoPreviewWrap" class="photo-preview hidden">
+            <img id="photoPreview" alt="Dekont önizleme" />
+          </div>
+          <p id="photoStatus" class="hint"></p>
+        </div>
         <button type="submit" class="btn primary wide" id="paySubmitBtn">Kaydet</button>
       </form>
     </dialog>
@@ -198,10 +216,19 @@
       </form>
     </dialog>
 
+    <dialog id="photoDialog" class="sheet photo-viewer">
+      <header>
+        <h3>Dekont</h3>
+        <button type="button" class="icon-btn" data-close="#photoDialog" aria-label="Kapat">✕</button>
+      </header>
+      <img id="photoViewerImg" alt="Dekont" />
+    </dialog>
+
     <div id="toast" role="status" aria-live="polite"></div>
 
     <script src="config.js"></script>
     <script src="js/rates.js"></script>
+    <script src="js/image.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/app.js"></script>
   </body>
