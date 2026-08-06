@@ -1,0 +1,86 @@
+name: Fetch TCMB Rates
+
+on:
+  schedule:
+    # Hafta içi Türkiye saati ~16:00 (TCMB bülteninden sonra)
+    - cron: "0 13 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download recent TCMB USD rates
+        run: |
+          python3 << 'PY'
+          import json, os, urllib.request, xml.etree.ElementTree as ET
+          from datetime import date, timedelta
+
+          out_dir = "rates"
+          os.makedirs(out_dir, exist_ok=True)
+
+          def fetch_day(d):
+              url = f"https://www.tcmb.gov.tr/kurlar/{d.strftime('%Y%m')}/{d.strftime('%d%m%Y')}.xml"
+              try:
+                  with urllib.request.urlopen(url, timeout=20) as r:
+                      root = ET.fromstring(r.read())
+              except Exception:
+                  return None
+              usd = None
+              for c in root.findall("Currency"):
+                  if c.get("CurrencyCode") == "USD":
+                      usd = {
+                          "unit": int(c.findtext("Unit") or 1),
+                          "forexBuying": float(c.findtext("ForexBuying")),
+                          "forexSelling": float(c.findtext("ForexSelling")),
+                          "banknoteBuying": float(c.findtext("BanknoteBuying") or 0),
+                          "banknoteSelling": float(c.findtext("BanknoteSelling") or 0),
+                      }
+                      break
+              if not usd:
+                  return None
+              return {
+                  "source": "TCMB",
+                  "date": d.isoformat(),
+                  "tcmbDate": root.get("Tarih"),
+                  "bulletin": root.get("Bulten_No"),
+                  "usd": usd,
+                  "rateUsed": "forexBuying",
+                  "usdTry": usd["forexBuying"],
+              }
+
+          latest = None
+          # Son 45 günü doldur (hafta sonu/tatil atlanır)
+          for i in range(45):
+              d = date.today() - timedelta(days=i)
+              data = fetch_day(d)
+              if not data:
+                  continue
+              path = os.path.join(out_dir, f"{d.isoformat()}.json")
+              with open(path, "w", encoding="utf-8") as f:
+                  json.dump(data, f, ensure_ascii=False, indent=2)
+                  f.write("\n")
+              if latest is None or data["date"] > latest["date"]:
+                  latest = data
+
+          if latest:
+              with open(os.path.join(out_dir, "latest.json"), "w", encoding="utf-8") as f:
+                  json.dump(latest, f, ensure_ascii=False, indent=2)
+                  f.write("\n")
+              print("latest", latest["date"], latest["usdTry"])
+          PY
+      - name: Commit rate updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rates
+          if git diff --staged --quiet; then
+            echo "No rate changes"
+          else
+            git commit -m "chore: TCMB USD/TRY kurlarını güncelle"
+            git push
+          fi
