@@ -127,6 +127,15 @@
     return u.searchParams.get("oda") || null;
   }
 
+  function getLastRoomId() {
+    try {
+      const meta = JSON.parse(localStorage.getItem(META_KEY) || "{}");
+      return meta.lastRoom || null;
+    } catch {
+      return null;
+    }
+  }
+
   function saveLocal(room) {
     localStorage.setItem(LOCAL_PREFIX + room.id, JSON.stringify(room));
     const meta = JSON.parse(localStorage.getItem(META_KEY) || "{}");
@@ -351,6 +360,7 @@
     isCloudEnabled,
     roomUrl,
     currentRoomId,
+    getLastRoomId,
     createRoom,
     loadRoom,
     saveRoom,

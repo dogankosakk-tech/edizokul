@@ -269,12 +269,35 @@
       .replace(/"/g, "&quot;");
   }
 
+  function updateWelcomeShareUi() {
+    const ready = EdizStore.isCloudEnabled();
+    const note = $("#shareReadyNote");
+    const setupBtn = $("#btnOpenSetup");
+    if (ready) {
+      show(note);
+      if (setupBtn) setupBtn.textContent = "Paylaşım ayarlarını düzenle →";
+    } else {
+      hide(note);
+      if (setupBtn) {
+        setupBtn.textContent = "Aileyle aynı linkten görmek için paylaşım kurulumu →";
+      }
+    }
+  }
+
   async function bindRoom(room) {
     if (state.unsubscribe) state.unsubscribe();
     state.room = room;
     const url = new URL(location.href);
     url.searchParams.set("oda", room.id);
-    history.replaceState(null, "", url);
+    const fb = EdizStore.getFirebase();
+    // fb parametresini de URL'de tut ki aile üyeleri / yeni sekme kaybetmesin
+    if (fb) {
+      // roomUrl zaten ekliyor; history için aynı mantık
+      const full = new URL(EdizStore.roomUrl(room.id));
+      history.replaceState(null, "", full);
+    } else {
+      history.replaceState(null, "", url);
+    }
     state.unsubscribe = EdizStore.subscribe(
       room.id,
       (fresh) => {
@@ -290,7 +313,8 @@
   }
 
   async function boot() {
-    const id = EdizStore.currentRoomId();
+    updateWelcomeShareUi();
+    let id = EdizStore.currentRoomId() || EdizStore.getLastRoomId();
     if (id) {
       try {
         const room = await EdizStore.loadRoom(id);
@@ -298,7 +322,7 @@
           await bindRoom(room);
           return;
         }
-        toast("Oda bulunamadı. Yeni bir oda oluşturabilirsin.", "warn");
+        // Yerelde/bulutta yoksa sessizce welcome'a düş
       } catch (e) {
         console.error(e);
         toast("Oda yüklenemedi: " + e.message, "error");
@@ -504,6 +528,7 @@
           databaseURL: $("#fbDatabaseURL").value,
           projectId: $("#fbProjectId").value,
         });
+        updateWelcomeShareUi();
         if (state.room) {
           state.room = await EdizStore.saveRoom(state.room);
           await bindRoom(state.room);
@@ -511,12 +536,12 @@
           hide($("#setupScreen"));
           show($("#appScreen"));
         } else {
-          toast("Paylaşım açıldı", "ok");
+          toast("Paylaşım kaydedildi. Şimdi fon oluştur.", "ok");
           hide($("#setupScreen"));
           show($("#welcomeScreen"));
         }
       } catch (e) {
-        toast(e.message, "error");
+        toast(e.message || "Kayıt başarısız", "error");
       }
     });
 
