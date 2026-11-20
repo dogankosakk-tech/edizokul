@@ -1,15 +1,15 @@
 {
   "source": "TCMB",
-  "date": "2026-11-19",
-  "tcmbDate": "19.11.2026",
-  "bulletin": "2026/218",
+  "date": "2026-11-20",
+  "tcmbDate": "20.11.2026",
+  "bulletin": "2026/219",
   "usd": {
     "unit": 1,
-    "forexBuying": 50.3786,
-    "forexSelling": 50.4694,
-    "banknoteBuying": 50.3434,
-    "banknoteSelling": 50.5451
+    "forexBuying": 50.4028,
+    "forexSelling": 50.4936,
+    "banknoteBuying": 50.3676,
+    "banknoteSelling": 50.5694
   },
   "rateUsed": "forexBuying",
-  "usdTry": 50.3786
+  "usdTry": 50.4028
 }
